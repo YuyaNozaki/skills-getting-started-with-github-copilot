@@ -48,8 +48,8 @@ activities = {
     "Basketball Club": {
         "description": "Pickup games and skill development in basketball",
         "schedule": "Tuesdays and Thursdays, 5:00 PM - 6:30 PM",
-        "max_participants": 18,
-        "participants": ["ava@mergington.edu", "isabella@mergington.edu"]
+        "max_participants": 15,
+        "participants": ["ava@mergington.edu", "jackson@mergington.edu"]
     },
     "Art Studio": {
         "description": "Explore painting, drawing, and mixed media",
@@ -75,6 +75,7 @@ activities = {
         "max_participants": 20,
         "participants": ["zoe@mergington.edu", "lauren@mergington.edu"]
     }
+
 }
 
 
@@ -88,23 +89,36 @@ def get_activities():
     return activities
 
 
-@app.post("/activities/{activity_name}/signup")
-def signup_for_activity(activity_name: str, email: str):
+@app.post("/signup/{activity}/{email}")
+async def signup_for_activity(activity: str, email: str):
     """Sign up a student for an activity"""
     # Validate activity exists
-    if activity_name not in activities:
+    if activity not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
 
     # Get the specific activity
-    activity = activities[activity_name]
+    activity_details = activities[activity]
 
     # Check if student is already signed up
-    if email in activity["participants"]:
+    if email in activity_details["participants"]:
         raise HTTPException(
             status_code=400,
             detail="Student is already signed up for this activity"
         )
 
     # Add student
-    activity["participants"].append(email)
-    return {"message": f"Signed up {email} for {activity_name}"}
+    activity_details["participants"].append(email)
+    return {"message": f"Successfully signed up {email} for {activity}"}
+
+
+@app.delete("/unregister/{activity}/{email}")
+async def unregister_participant(activity: str, email: str):
+    """Unregister a student from an activity"""
+    if activity not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    
+    if email not in activities[activity]["participants"]:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    
+    activities[activity]["participants"].remove(email)
+    return {"message": "Successfully unregistered"}

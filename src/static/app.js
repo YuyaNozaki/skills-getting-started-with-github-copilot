@@ -4,14 +4,47 @@ document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
 
+  // Function to unregister a participant
+  async function unregisterParticipant(activity, email) {
+    try {
+      const response = await fetch(`/unregister/${activity}/${email}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to unregister');
+      }
+
+      // Refresh the activities list
+      await fetchActivities();
+      messageDiv.textContent = 'Successfully unregistered from the activity';
+      messageDiv.style.color = '#4caf50';
+    } catch (error) {
+      messageDiv.textContent = error.message;
+      messageDiv.style.color = '#f44336';
+      console.error('Error unregistering:', error);
+    }
+  }
+
+  // Event listener for delete buttons
+  activitiesList.addEventListener('click', async (event) => {
+    if (event.target.classList.contains('delete-participant')) {
+      const activity = event.target.dataset.activity;
+      const email = event.target.dataset.email;
+      await unregisterParticipant(activity, email);
+    }
+  });
+
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
       const response = await fetch("/activities");
       const activities = await response.json();
 
-      // Clear loading message
+      // Clear loading message and activity select options
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = "";
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -28,7 +61,11 @@ document.addEventListener("DOMContentLoaded", () => {
           <p class="participants-header">Current Participants:</p>
           <ul class="participants-list">
             ${details.participants.length > 0 
-              ? details.participants.map(email => `<li>${email}</li>`).join('')
+              ? details.participants.map(email => `
+                <li class="participant-item">
+                  <span class="delete-participant" data-activity="${name}" data-email="${email}">×</span>
+                  ${email}
+                </li>`).join('')
               : '<li>No participants yet</li>'
             }
           </ul>
@@ -57,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+        `/signup/${encodeURIComponent(activity)}/${encodeURIComponent(email)}`,
         {
           method: "POST",
         }
@@ -69,6 +106,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh activities list after successful registration
+        await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
